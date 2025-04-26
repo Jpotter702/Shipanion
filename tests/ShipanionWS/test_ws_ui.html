@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .message-list {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .sent {
+            background-color: #e6f7ff;
+        }
+        .received {
+            background-color: #f6ffed;
+        }
+        .error {
+            background-color: #fff1f0;
+        }
+        .contextual {
+            background-color: #fff7e6;
+        }
+        button {
+            padding: 8px 16px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div class="container">
+        <div class="panel">
+            <h2>Connection</h2>
+            <div>
+                <label for="token">Token:</label>
+                <input type="text" id="token" placeholder="JWT Token">
+                <button id="getToken">Get Test Token</button>
+            </div>
+            <div>
+                <label for="session-id">Session ID (optional):</label>
+                <input type="text" id="session-id" placeholder="Session ID">
+            </div>
+            <div>
+                <button id="connect">Connect</button>
+                <button id="disconnect">Disconnect</button>
+            </div>
+            <div>
+                <p>Status: <span id="status">Disconnected</span></p>
+                <p>Session ID: <span id="current-session-id">None</span></p>
+            </div>
+        </div>
+        <div class="panel">
+            <h2>Send Message</h2>
+            <div>
+                <label for="message-type">Message Type:</label>
+                <select id="message-type">
+                    <option value="test">Test</option>
+                    <option value="get_rates">Get Rates</option>
+                    <option value="client_tool_call">Client Tool Call</option>
+                </select>
+            </div>
+            <div id="rate-request-form" style="display: none;">
+                <h3>Rate Request</h3>
+                <div>
+                    <label for="origin-zip">Origin ZIP:</label>
+                    <input type="text" id="origin-zip" value="90210">
+                </div>
+                <div>
+                    <label for="destination-zip">Destination ZIP:</label>
+                    <input type="text" id="destination-zip" value="10001">
+                </div>
+                <div>
+                    <label for="weight">Weight (lbs):</label>
+                    <input type="number" id="weight" value="5">
+                </div>
+            </div>
+            <div id="tool-call-form" style="display: none;">
+                <h3>Client Tool Call</h3>
+                <div>
+                    <label for="tool-name">Tool Name:</label>
+                    <select id="tool-name">
+                        <option value="get_shipping_quotes">get_shipping_quotes</option>
+                        <option value="create_label">create_label</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="tool-call-id">Tool Call ID:</label>
+                    <input type="text" id="tool-call-id" value="ui-test-123">
+                </div>
+                <div id="shipping-quotes-params">
+                    <div>
+                        <label for="from-zip">From ZIP:</label>
+                        <input type="text" id="from-zip" value="90210">
+                    </div>
+                    <div>
+                        <label for="to-zip">To ZIP:</label>
+                        <input type="text" id="to-zip" value="10001">
+                    </div>
+                    <div>
+                        <label for="tool-weight">Weight (lbs):</label>
+                        <input type="number" id="tool-weight" value="5">
+                    </div>
+                </div>
+                <div>
+                    <label for="broadcast">Broadcast:</label>
+                    <input type="checkbox" id="broadcast" checked>
+                </div>
+            </div>
+            <div>
+                <label for="custom-payload">Custom Payload (JSON):</label>
+                <textarea id="custom-payload" rows="5">{"message": "Hello, WebSocket server!"}</textarea>
+            </div>
+            <button id="send">Send Message</button>
+        </div>
+    </div>
+    <h2>Messages</h2>
+    <div class="message-list" id="messages"></div>
+
+    <script>
+        // DOM Elements
+        const tokenInput = document.getElementById('token');
+        const sessionIdInput = document.getElementById('session-id');
+        const statusSpan = document.getElementById('status');
+        const currentSessionIdSpan = document.getElementById('current-session-id');
+        const messagesDiv = document.getElementById('messages');
+        const messageTypeSelect = document.getElementById('message-type');
+        const rateRequestForm = document.getElementById('rate-request-form');
+        const toolCallForm = document.getElementById('tool-call-form');
+        const customPayloadTextarea = document.getElementById('custom-payload');
+        
+        // WebSocket connection
+        let ws = null;
+        
+        // Event Listeners
+        document.getElementById('getToken').addEventListener('click', getTestToken);
+        document.getElementById('connect').addEventListener('click', connect);
+        document.getElementById('disconnect').addEventListener('click', disconnect);
+        document.getElementById('send').addEventListener('click', sendMessage);
+        messageTypeSelect.addEventListener('change', updateFormVisibility);
+        
+        // Initialize
+        updateFormVisibility();
+        
+        // Functions
+        async function getTestToken() {
+            try {
+                const response = await fetch('http://localhost:8001/test-token');
+                const data = await response.json();
+                tokenInput.value = data.test_token;
+                addMessage('System', `Got test token: ${data.test_token.substring(0, 10)}...`, 'sent');
+            } catch (error) {
+                addMessage('Error', `Failed to get test token: ${error.message}`, 'error');
+            }
+        }
+        
+        function connect() {
+            if (ws) {
+                addMessage('System', 'Already connected', 'error');
+                return;
+            }
+            
+            const token = tokenInput.value;
+            if (!token) {
+                addMessage('System', 'Token is required', 'error');
+                return;
+            }
+            
+            const sessionId = sessionIdInput.value;
+            let url = `ws://localhost:8001/ws?token=${token}`;
+            if (sessionId) {
+                url += `&session_id=${sessionId}`;
+            }
+            
+            try {
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    statusSpan.textContent = 'Connected';
+                    addMessage('System', 'Connected to WebSocket server', 'sent');
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    let messageClass = 'received';
+                    
+                    if (data.type === 'error') {
+                        messageClass = 'error';
+                    } else if (data.type === 'contextual_update') {
+                        messageClass = 'contextual';
+                    }
+                    
+                    addMessage('Received', event.data, messageClass);
+                    
+                    // Extract session ID if available
+                    if (data.session_id) {
+                        currentSessionIdSpan.textContent = data.session_id;
+                        sessionIdInput.value = data.session_id;
+                    }
+                };
+                
+                ws.onclose = () => {
+                    statusSpan.textContent = 'Disconnected';
+                    addMessage('System', 'Disconnected from WebSocket server', 'error');
+                    ws = null;
+                };
+                
+                ws.onerror = (error) => {
+                    addMessage('Error', `WebSocket error: ${error.message}`, 'error');
+                };
+            } catch (error) {
+                addMessage('Error', `Failed to connect: ${error.message}`, 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (!ws) {
+                addMessage('System', 'Not connected', 'error');
+                return;
+            }
+            
+            ws.close();
+            statusSpan.textContent = 'Disconnected';
+            addMessage('System', 'Disconnected from WebSocket server', 'sent');
+            ws = null;
+        }
+        
+        function sendMessage() {
+            if (!ws) {
+                addMessage('System', 'Not connected', 'error');
+                return;
+            }
+            
+            const messageType = messageTypeSelect.value;
+            let payload = {};
+            
+            try {
+                if (messageType === 'get_rates') {
+                    payload = {
+                        origin_zip: document.getElementById('origin-zip').value,
+                        destination_zip: document.getElementById('destination-zip').value,
+                        weight: parseFloat(document.getElementById('weight').value)
+                    };
+                } else if (messageType === 'client_tool_call') {
+                    const toolName = document.getElementById('tool-name').value;
+                    const toolCallId = document.getElementById('tool-call-id').value;
+                    const broadcast = document.getElementById('broadcast').checked;
+                    
+                    let parameters = {};
+                    if (toolName === 'get_shipping_quotes') {
+                        parameters = {
+                            from_zip: document.getElementById('from-zip').value,
+                            to_zip: document.getElementById('to-zip').value,
+                            weight: parseFloat(document.getElementById('tool-weight').value)
+                        };
+                    }
+                    
+                    payload = {
+                        client_tool_call: {
+                            tool_name: toolName,
+                            tool_call_id: toolCallId,
+                            parameters: parameters
+                        },
+                        broadcast: broadcast
+                    };
+                } else {
+                    // For test messages, use the custom payload
+                    payload = JSON.parse(customPayloadTextarea.value);
+                }
+                
+                const message = {
+                    type: messageType,
+                    payload: payload
+                };
+                
+                ws.send(JSON.stringify(message));
+                addMessage('Sent', JSON.stringify(message, null, 2), 'sent');
+            } catch (error) {
+                addMessage('Error', `Failed to send message: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateFormVisibility() {
+            const messageType = messageTypeSelect.value;
+            
+            rateRequestForm.style.display = messageType === 'get_rates' ? 'block' : 'none';
+            toolCallForm.style.display = messageType === 'client_tool_call' ? 'block' : 'none';
+            customPayloadTextarea.parentElement.style.display = messageType === 'test' ? 'block' : 'none';
+        }
+        
+        function addMessage(title, content, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            
+            const titleElement = document.createElement('strong');
+            titleElement.textContent = title;
+            
+            const contentElement = document.createElement('pre');
+            contentElement.textContent = content;
+            
+            messageDiv.appendChild(titleElement);
+            messageDiv.appendChild(document.createElement('br'));
+            messageDiv.appendChild(contentElement);
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>

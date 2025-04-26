@@ -4,7 +4,7 @@
 # Set variables
 WS_SERVER_URL=${WS_SERVER_URL:-"ws://localhost:8001/ws"}
 API_SERVER_URL=${API_SERVER_URL:-"http://localhost:8001"}
-FRONTEND_URL=${FRONTEND_URL:-"http://localhost:3001"}
+FRONTEND_URL=${FRONTEND_URL:-"http://localhost:3000"}
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -30,13 +30,13 @@ TOTAL=0
 run_test() {
     TEST_NAME=$1
     TEST_SCRIPT=$2
-    
+
     echo -e "\n${BLUE}Running test: ${TEST_NAME}${NC}"
-    
+
     if [ -f "$TEST_SCRIPT" ]; then
         # Run the test script
         bash "$TEST_SCRIPT"
-        
+
         # Check the exit code
         if [ $? -eq 0 ]; then
             echo -e "${GREEN}✓ ${TEST_NAME} passed${NC}"
@@ -45,7 +45,7 @@ run_test() {
             echo -e "${RED}✗ ${TEST_NAME} failed${NC}"
             FAILED=$((FAILED + 1))
         fi
-        
+
         TOTAL=$((TOTAL + 1))
     else
         echo -e "${RED}Test script not found: ${TEST_SCRIPT}${NC}"

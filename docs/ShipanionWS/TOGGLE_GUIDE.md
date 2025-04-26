@@ -101,17 +101,24 @@ You can also verify the toggle by examining the logs during a rate request:
 
 ## Testing the Toggle
 
-A test script `test_toggle.py` has been provided to verify the toggle functionality:
+A new test file `tests/sprint3/test_internal_toggle.py` has been created to verify the toggle functionality. It tests that the response contains valid shipping quotes, regardless of which mode is used.
+
+To run the tests:
 
 ```bash
 # Test with USE_INTERNAL=False (default)
-python test_toggle.py
+cd /home/jason/Shipanion
+pytest ShipanionWS/tests/sprint3/test_internal_toggle.py -v
 
 # Test with USE_INTERNAL=True
-USE_INTERNAL=true python test_toggle.py
+cd /home/jason/Shipanion
+USE_INTERNAL=true pytest ShipanionWS/tests/sprint3/test_internal_toggle.py -v
 ```
 
-The test script sends a rate request and verifies that the response contains valid shipping quotes, regardless of which mode is used.
+The test verifies that:
+- The server returns a valid response with shipping quotes
+- The response structure is consistent regardless of which mode is used
+- No errors occur in either mode
 
 ## Benefits
 

@@ -32,6 +32,12 @@ The `handle_get_shipping_quotes` function in `elevenlabs_handler.py` has been up
 - Log detailed error information including the tool call ID
 - Return a properly formatted `client_tool_result` with `is_error: true` and a descriptive error message
 
+The `handle_create_label` function has been similarly updated to:
+
+- Use explicit error handling for HTTP errors, timeouts, and network errors
+- Use a consistent 10-second timeout for API requests
+- Return properly formatted error responses with detailed error messages
+
 ### 3. Rate Request Handler
 
 The `handle_rate_request` function in `handlers.py` has been similarly updated to:
@@ -76,17 +82,22 @@ The `handle_rate_request` function in `handlers.py` has been similarly updated t
 
 ## Testing
 
-A test script `test_error_handling.py` has been provided to verify the error handling functionality. It tests:
+A new test file `tests/sprint3/test_error_handling.py` has been created to verify the error handling implementation. It includes tests for:
 
-1. Invalid ZIP code (should trigger a 400 Bad Request)
-2. Missing required fields (should trigger a validation error)
+1. **Timeout Handling**: Using a special ZIP code `99999` to simulate a timeout
+2. **Non-200 Response Handling**: Using an invalid ZIP code to trigger a 400 Bad Request
 
-To run the test:
+To run the tests:
 
 ```bash
-cd /home/jason/Shipanion/websocket
-python test_error_handling.py
+cd /home/jason/Shipanion
+pytest ShipanionWS/tests/sprint3/test_error_handling.py -v
 ```
+
+The tests verify that:
+- The server properly handles timeouts and returns an appropriate error message
+- The server properly handles non-200 responses and returns an appropriate error message
+- The error responses include the correct `is_error: true` flag and detailed error information
 
 ## Error Scenarios Handled
 

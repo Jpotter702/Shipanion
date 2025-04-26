@@ -26,7 +26,7 @@ async def get_rates(self, rate_request: Dict[str, Any], timeout_seconds: float =
     # ...
     # Create a specific timeout for this request
     timeout = httpx.Timeout(timeout_seconds)
-    
+
     try:
         response = await self.client.post(url, json=rate_request, timeout=timeout)
         # ...
@@ -87,39 +87,26 @@ The `handle_rate_request` function in `handlers.py` has been similarly updated t
 
 ## Testing
 
-Two test scripts have been provided to verify the timeout handling functionality:
+A new test file `tests/sprint3/test_timeout_handling.py` has been created to verify the timeout handling implementation. It includes tests for:
 
-1. `test_timeout_handling.py`: Tests the timeout handling for client tool calls
-2. `mock_timeout_server.py`: A mock server that simulates timeouts for testing
+1. **Client Tool Call Timeout**: Tests that a client tool call with a special ZIP code that triggers a timeout returns the correct error response
+2. **Direct Rate Request Timeout**: Tests that a direct rate request with a special ZIP code that triggers a timeout returns the correct error response
 
-### Running the Tests
-
-1. Start the mock timeout server:
+To run the tests:
 
 ```bash
-cd /home/jason/Shipanion/websocket
-python mock_timeout_server.py
+cd /home/jason/Shipanion
+pytest ShipanionWS/tests/sprint3/test_timeout_handling.py -v
 ```
 
-2. Update the `SHIPVOX_API_URL` environment variable to point to the mock server:
+The tests verify that:
+- The server properly handles timeouts and returns an appropriate error message
+- The error responses include the correct `is_error: true` flag
+- The error message is exactly `timeout calling rates endpoint` as required
 
-```bash
-export SHIPVOX_API_URL="http://localhost:8002/api"
-```
+### Special Test ZIP Code
 
-3. Start the WebSocket server in another terminal:
-
-```bash
-cd /home/jason/Shipanion/websocket
-python -m uvicorn backend.main:app --reload --port 8001
-```
-
-4. Run the timeout test:
-
-```bash
-cd /home/jason/Shipanion/websocket
-python test_timeout_handling.py
-```
+The tests use a special ZIP code `99999` to trigger a timeout. When this ZIP code is used in a rate request, the internal shipping service simulates a timeout by raising a `TimeoutError` exception.
 
 ## Benefits
 
