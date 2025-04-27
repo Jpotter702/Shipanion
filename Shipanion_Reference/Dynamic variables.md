@@ -1,0 +1,244 @@
+# Dynamic variables
+
+> Pass runtime values to personalize your agent's behavior.
+
+**Dynamic variables** allow you to inject runtime values into your agent's messages, system prompts, and tools. This enables you to personalize each conversation with user-specific data without creating multiple agents.
+
+## Overview
+
+Dynamic variables can be integrated into multiple aspects of your agent:
+
+* **System prompts** to customize behavior and context
+* **First messages** to personalize greetings
+* **Tool parameters** to pass user-specific data
+
+Here are a few examples where dynamic variables are useful:
+
+* **Personalizing greetings** with user names
+* **Including account details** in responses
+* **Passing data** to tool calls
+* **Customizing behavior** based on subscription tiers
+* **Accessing system information** like conversation ID or call duration
+
+<Info>
+  Dynamic variables are ideal for injecting user-specific data that shouldn't be hardcoded into your
+  agent's configuration.
+</Info>
+
+## System dynamic variables
+
+Your agent has access to these automatically available system variables:
+
+* `system__agent_id` - Unique agent identifier
+* `system__caller_id` - Caller's phone number (voice calls only)
+* `system__called_number` - Destination phone number (voice calls only)
+* `system__call_duration_secs` - Call duration in seconds
+* `system__time_utc` - Current UTC time (ISO format)
+* `system__conversation_id` - ElevenLabs' unique conversation identifier
+* `system__call_sid` - Call SID (twilio calls only)
+
+System variables:
+
+* Are available without runtime configuration
+* Are prefixed with `system__` (reserved prefix)
+* In system prompts: Set once at conversation start (value remains static)
+* In tool calls: Updated at execution time (value reflects current state)
+
+<Warning>
+  Custom dynamic variables cannot use the reserved 
+
+  `system__`
+
+   prefix.
+</Warning>
+
+## Guide
+
+### Prerequisites
+
+* An [ElevenLabs account](https://elevenlabs.io)
+* A configured ElevenLabs Conversational Agent ([create one here](/docs/conversational-ai/quickstart))
+
+<Steps>
+  <Step title="Define dynamic variables in prompts">
+    Add variables using double curly braces `{{variable_name}}` in your:
+
+    * System prompts
+    * First messages
+    * Tool parameters
+
+    <Frame background="subtle">
+      ![Dynamic variables in messages](file:34565412-a2c6-46a4-99b2-3de2cff3ccc3)
+    </Frame>
+
+    <Frame background="subtle">
+      ![Dynamic variables in messages](file:41962834-ca05-46c0-ad3d-a527797a17fa)
+    </Frame>
+  </Step>
+
+  <Step title="Define dynamic variables in tools">
+    You can also define dynamic variables in the tool configuration.
+    To create a new dynamic variable, set the value type to Dynamic variable and click the `+` button.
+
+    <Frame background="subtle">
+      ![Setting placeholders](file:579d9843-f493-4ff1-85a5-b39a061d87dc)
+    </Frame>
+
+    <Frame background="subtle">
+      ![Setting placeholders](file:ca369be1-2fd8-4aab-a80b-f7feb144e263)
+    </Frame>
+  </Step>
+
+  <Step title="Set placeholders">
+    Configure default values in the web interface for testing:
+
+    <Frame background="subtle">
+      ![Setting placeholders](file:2bdad995-6de2-4489-9e09-66c74205f074)
+    </Frame>
+  </Step>
+
+  <Step title="Pass variables at runtime">
+    When starting a conversation, provide the dynamic variables in your code:
+
+    <Tip>
+      Ensure you have the latest [SDK](/docs/conversational-ai/libraries) installed.
+    </Tip>
+
+    <CodeGroup>
+      ```python title="Python" focus={10-23} maxLines=25
+      import os
+      import signal
+      from elevenlabs.client import ElevenLabs
+      from elevenlabs.conversational_ai.conversation import Conversation, ConversationConfig
+      from elevenlabs.conversational_ai.default_audio_interface import DefaultAudioInterface
+
+      agent_id = os.getenv("AGENT_ID")
+      api_key = os.getenv("ELEVENLABS_API_KEY")
+      client = ElevenLabs(api_key=api_key)
+
+      dynamic_vars = {
+        "user_name": "Angelo",
+      }
+
+      config = ConversationConfig(
+        dynamic_variables=dynamic_vars
+      )
+
+      conversation = Conversation(
+        client,
+        agent_id,
+        config=config,
+        # Assume auth is required when API_KEY is set.
+        requires_auth=bool(api_key),
+        # Use the default audio interface.
+        audio_interface=DefaultAudioInterface(),
+        # Simple callbacks that print the conversation to the console.
+        callback_agent_response=lambda response: print(f"Agent: {response}"),
+        callback_agent_response_correction=lambda original, corrected: print(f"Agent: {original} -> {corrected}"),
+        callback_user_transcript=lambda transcript: print(f"User: {transcript}"),
+        # Uncomment the below if you want to see latency measurements.
+        # callback_latency_measurement=lambda latency: print(f"Latency: {latency}ms"),
+      )
+
+      conversation.start_session()
+
+      signal.signal(signal.SIGINT, lambda sig, frame: conversation.end_session())
+      ```
+
+      ```javascript title="JavaScript" focus={7-20} maxLines=25
+      import { Conversation } from '@11labs/client';
+
+      class VoiceAgent {
+        ...
+
+        async startConversation() {
+          try {
+              // Request microphone access
+              await navigator.mediaDevices.getUserMedia({ audio: true });
+
+              this.conversation = await Conversation.startSession({
+                  agentId: 'agent_id_goes_here', // Replace with your actual agent ID
+
+                  dynamicVariables: {
+                      user_name: 'Angelo'
+                  },
+
+                  ... add some callbacks here
+              });
+          } catch (error) {
+              console.error('Failed to start conversation:', error);
+              alert('Failed to start conversation. Please ensure microphone access is granted.');
+          }
+        }
+      }
+      ```
+
+      ```swift title="Swift"
+      let dynamicVars: [String: DynamicVariableValue] = [
+        "customer_name": .string("John Doe"),
+        "account_balance": .number(5000.50),
+        "user_id": .int(12345),
+        "is_premium": .boolean(true)
+      ]
+
+      // Create session config with dynamic variables
+      let config = SessionConfig(
+          agentId: "your_agent_id",
+          dynamicVariables: dynamicVars
+      )
+
+      // Start the conversation
+      let conversation = try await Conversation.startSession(
+          config: config
+      )
+      ```
+
+      ```html title="Widget"
+      <elevenlabs-convai
+        agent-id="your-agent-id"
+        dynamic-variables='{"user_name": "John", "account_type": "premium"}'
+      ></elevenlabs-convai>
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Supported Types
+
+Dynamic variables support these value types:
+
+<CardGroup cols={3}>
+  <Card title="String">
+    Text values
+  </Card>
+
+  <Card title="Number">
+    Numeric values
+  </Card>
+
+  <Card title="Boolean">
+    True/false values
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Variables not replacing">
+    Verify that:
+
+    * Variable names match exactly (case-sensitive)
+    * Variables use double curly braces: `{{ variable_name }}`
+    * Variables are included in your dynamic\_variables object
+  </Accordion>
+
+  <Accordion title="Type errors">
+    Ensure that:
+
+    * Variable values match the expected type
+    * Values are strings, numbers, or booleans only
+  </Accordion>
+</AccordionGroup>
+Highlight connections
+0 connections found
+Actions

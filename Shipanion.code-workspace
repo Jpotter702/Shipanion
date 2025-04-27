@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "ShipanionMW"
+		},
+		{
+			"path": "ShipanionUI"
+		},
+		{
+			"path": "ShipanionWS"
+		},
+		{
+			"path": "tests"
+		},
+		{
+			"path": "docs"
+		}
+	],
+	"settings": {}
+}
