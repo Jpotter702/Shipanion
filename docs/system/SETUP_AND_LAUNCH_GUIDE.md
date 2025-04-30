@@ -17,6 +17,7 @@ The Shipanion application consists of the following components:
 - Python 3.8+
 - pip (Python package manager)
 - Git (for version control)
+- websocat (for WebSocket testing)
 
 ## Directory Structure
 
@@ -52,7 +53,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### 2. ShipVox API Setup
@@ -79,7 +80,7 @@ Create a `.env` file in the `websocket` directory:
 DEBUG=True
 SECRET_KEY=your_secret_key_here
 SHIPVOX_API_KEY=your_shipvox_api_key_here
-ALLOWED_ORIGINS=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3001
 ```
 
 #### ShipanionUI Environment
@@ -87,7 +88,7 @@ ALLOWED_ORIGINS=http://localhost:3000
 Create a `.env.local` file in the `ShipanionUI` directory:
 
 ```
-NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8000/ws
+NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8001/ws
 ```
 
 ## Launch Instructions
@@ -105,12 +106,12 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Start the server
-uvicorn backend.main:app --reload --port 8000
+python -m uvicorn backend.main:app --reload --port 8001
 ```
 
 The WebSocket server will be available at:
-- HTTP: http://localhost:8000
-- WebSocket: ws://localhost:8000/ws
+- HTTP: http://localhost:8001
+- WebSocket: ws://localhost:8001/ws
 
 ### 2. Start the ShipanionUI Frontend
 
@@ -122,7 +123,7 @@ cd ShipanionUI
 pnpm dev
 ```
 
-The frontend will be available at http://localhost:3000
+The frontend will be available at http://localhost:3001
 
 ### 3. Run Test Scripts
 
@@ -135,6 +136,10 @@ cd websocket
 # Make sure the scripts are executable
 chmod +x test_create_label.sh
 chmod +x test_session.sh
+
+# Update the scripts to use port 8001 instead of 8000
+sed -i 's/localhost:8000/localhost:8001/g' test_create_label.sh
+sed -i 's/localhost:8000/localhost:8001/g' test_session.sh
 
 # Run the create label test
 ./test_create_label.sh
@@ -160,13 +165,13 @@ python -m pytest tests/sprint2/test_create_label.py -v
 
 ### WebSocket Server Endpoints
 
-- **Main API**: http://localhost:8000
-- **WebSocket Endpoint**: ws://localhost:8000/ws
-- **Test Token**: http://localhost:8000/test-token
+- **Main API**: http://localhost:8001
+- **WebSocket Endpoint**: ws://localhost:8001/ws
+- **Test Token**: http://localhost:8001/test-token
 
 ### ShipanionUI
 
-- **Main UI**: http://localhost:3000
+- **Main UI**: http://localhost:3001
 - **WebSocket Tester**: Available in development mode at the bottom of the main page
 
 ## Troubleshooting
@@ -184,18 +189,28 @@ If you're having trouble connecting to the WebSocket server:
 
 If you encounter missing dependencies:
 
-1. For the WebSocket server: `pip install -r requirements.txt`
+1. For the WebSocket server: `python -m pip install -r requirements.txt`
 2. For the ShipanionUI: `pnpm install`
 
 ### Port Conflicts
 
 If ports are already in use:
 
-1. For the WebSocket server: Change the port in the uvicorn command (e.g., `--port 8001`)
-2. For the ShipanionUI: Change the port with `pnpm dev -p 3001`
+1. For the WebSocket server: Change the port in the uvicorn command (e.g., `--port 8002`)
+2. For the ShipanionUI: Change the port with `pnpm dev -p 3002`
+
+### Maximum Call Stack Size Exceeded Error
+
+If you encounter a "Maximum call stack size exceeded" error in the frontend:
+
+1. Check for recursive component rendering in the toast components
+2. Ensure that the ToastProvider is not being used recursively
 
 ## Additional Resources
 
 - [WebSocket Server Documentation](websocket/README.md)
 - [ShipanionUI Documentation](ShipanionUI/README.md)
-- [API Documentation](http://localhost:8000/docs) (when server is running)
+- [API Documentation](http://localhost:8001/docs) (when server is running)
+- [WebSocket Changes Documentation](websocket/SPRINT2_CHANGES.md)
+- [Frontend Changes Documentation](ShipanionUI/FRONTEND_CHANGES.md)
+- [Sound Effects Guide](ShipanionUI/SOUND_EFFECTS_GUIDE.md)

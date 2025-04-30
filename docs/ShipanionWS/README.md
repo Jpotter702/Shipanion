@@ -1,110 +1,130 @@
-# ShipVox WebSocket Pack
+# ShipanionWS (WebSocket Server)
 
-This pack scaffolds a real-time WebSocket integration for the ShipVox project.
+Real-time communication layer for the Shipanion platform.
 
-## Contents
+## Overview
 
-### Backend
-- `backend/main.py`: FastAPI WebSocket server that handles connection lifecycle and broadcasting messages.
+ShipanionWS serves as the communication bridge between the frontend (ShipanionUI) and middleware (ShipanionMW), enabling real-time updates and voice interactions. It provides:
 
-### Frontend
-- `frontend/hooks/useWebSocket.ts`: React hook for maintaining a WebSocket connection and receiving messages.
-- `frontend/utils/dispatchMessageByType.ts`: Dispatcher to route message types to state setters.
-- `frontend/types/MessageTypes.ts`: TypeScript interfaces and enums for WebSocket message structure.
+- WebSocket server for real-time updates
+- ElevenLabs voice integration
+- Session management
+- Event-based communication between UI and middleware
+- Authentication via JWT
 
-## WebSocket Message Format
+## Features
 
-All messages follow this format:
+### WebSocket Communication
 
-```ts
-interface WebSocketMessage {
-  type: WebSocketMessageType;
-  payload: any;
-  timestamp: number;
-  requestId: string;
-}
-```
+The WebSocket server handles real-time communication between the frontend and middleware, allowing for:
 
-## Common Message Types
-- `zip_collected`
-- `weight_confirmed`
-- `quote_ready`
-- `label_created`
-- `pickup_scheduled`
-- `contextual_update`
-- `client_tool_call`
-- `client_tool_result`
-- `error`
-- `auth`
+- Real-time shipping rate updates
+- Label creation notifications
+- Session tracking across devices
+- Voice agent integration
 
-## Authentication
+### ElevenLabs Integration
 
-The WebSocket connection is secured with JWT-based authentication:
+The server integrates with ElevenLabs Conversational AI, providing:
 
-1. Clients must first obtain a JWT token by authenticating with username/password
-2. The JWT token is then passed in the WebSocket URL query string: `ws://localhost:8000/ws?token=eyJhbGciOiJIUzI1...`
-3. If the token is missing, invalid, or expired, the server will close the connection with code 1008 (Policy Violation)
-4. The JWT token contains user information and has a configurable expiration time
+- Client tool calls for shipping quotes and label creation
+- Contextual updates for UI based on tool call results
+- Parallel WebSocket connections for tool results and UI updates
 
-For detailed documentation on the authentication system, see [AUTHENTICATION.md](./AUTHENTICATION.md).
+### REST/Internal Call Toggle
 
-### Obtaining a JWT Token
+The server includes a toggle (`USE_INTERNAL`) that controls how shipping-related functionality is accessed:
 
-```bash
-# Using curl to authenticate
-curl -X POST "http://localhost:8000/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=user&password=password"
+- When `USE_INTERNAL = False` (default): The server makes HTTP requests to the ShipVox API endpoints.
+- When `USE_INTERNAL = True`: The server calls internal functions directly from the backend service module.
 
-# Response
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 1800
-}
+This toggle facilitates the transition after the backend merge, allowing for easy switching between the two modes of operation.
 
-# Or use the pre-generated test token
-curl "http://localhost:8000/test-token"
-```
+## Getting Started
 
-A pre-generated test token is available for quick testing that doesn't expire. For detailed information about using the test token, see [TEST_TOKEN_GUIDE.md](./TEST_TOKEN_GUIDE.md).
+### Prerequisites
 
-### Command Line Usage
+- Python 3.8+
+- pip (Python package manager)
+- Virtual environment (recommended)
 
-A command-line client is provided for testing:
+### Installation
+
+1. Clone the repository:
 
 ```bash
-# Basic usage
-./ws_jwt_client.py --type test --payload '{"message":"Hello world"}'
-
-# Interactive mode
-./ws_jwt_client.py --interactive
+git clone https://github.com/your-username/Shipanion.git
+cd Shipanion/ShipanionWS
 ```
 
-### Frontend Usage
+2. Create and activate a virtual environment:
 
-```typescript
-// First obtain a JWT token through authentication
-const token = await authenticateUser(username, password);
-
-// Then pass the JWT token to the WebSocket hook
-const { status, messages, sendMessage } = useWebSocket('ws://localhost:8000/ws', {
-  token: token,
-});
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-## Security Features
+3. Install dependencies:
 
-- **JWT Authentication**: Secure, stateless authentication with expiration
-- **User Context**: Each message includes the authenticated user information
-- **Connection Tracking**: Server tracks which user owns each connection
-- **Automatic Token Validation**: Tokens are validated for authenticity and expiration
-- **Password Hashing**: User passwords are securely hashed using bcrypt
-- **Token Signing**: JWT tokens are cryptographically signed to prevent tampering
-- **Standard OAuth2 Flow**: Uses industry-standard OAuth2 password flow for authentication
+```bash
+pip install -r requirements.txt
+```
 
-## Next Steps
+### Configuration
 
-- Build frontend UI bindings using Tailwind & Radix UI
-- Use the dispatcher to populate live components (cards, steppers, etc.)
-- Implement HTTPS/WSS for secure connections in production
+Create a `.env` file in the root directory with the following settings:
+
+```
+# API settings
+SHIPVOX_API_URL=http://localhost:8000/api
+
+# Authentication settings
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# WebSocket settings
+ALLOWED_ORIGINS=http://localhost:3000
+
+# Debug settings
+DEBUG=True
+
+# Toggle for using internal function calls vs REST API
+USE_INTERNAL=False
+```
+
+### Running the Server
+
+Start the WebSocket server:
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+The server will be available at:
+- HTTP: http://localhost:8000
+- WebSocket: ws://localhost:8000/ws
+
+## Documentation
+
+For more detailed information, see the following documentation:
+
+- [TOGGLE_GUIDE.md](../docs/ShipanionWS/TOGGLE_GUIDE.md): Guide for using the REST/internal call toggle
+- [ELEVENLABS_INTEGRATION_GUIDE.md](../docs/ShipanionWS/ELEVENLABS_INTEGRATION_GUIDE.md): Guide for integrating with ElevenLabs
+- [ERROR_HANDLING_GUIDE.md](../docs/ShipanionWS/ERROR_HANDLING_GUIDE.md): Guide for error handling
+- [TIMEOUT_HANDLING_GUIDE.md](../docs/ShipanionWS/TIMEOUT_HANDLING_GUIDE.md): Guide for timeout handling
+- [TEST_TOKEN_GUIDE.md](../docs/ShipanionWS/TEST_TOKEN_GUIDE.md): Guide for using the test token
+
+## Testing
+
+Run the tests:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/sprint3/test_internal_toggle.py
+
+# Run tests with USE_INTERNAL=True
+USE_INTERNAL=true pytest tests/sprint3/test_internal_toggle.py
+```
